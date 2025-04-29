@@ -1,10 +1,14 @@
 import streamlit as st
-from pages.wind_production import app as wind_production_app
+from apps.wind_production import app as wind_production_app
+from apps.spot_prices import app as spot_prices_app
+from apps.earnings import app as earnings_app
 
-# Define available pages
+# Define pages
 PAGES = {
     "Home": None,
     "Wind Production Analysis": wind_production_app,
+    "NO2 Spot Prices 2024": spot_prices_app,
+    "Earnings Høg-Jæren 2024": earnings_app,
 }
 
 st.set_page_config(page_title="Streamlit Analytics Platform", layout="wide")
@@ -14,7 +18,6 @@ st.sidebar.title("Navigation")
 selection = st.sidebar.radio("Go to", list(PAGES.keys()))
 
 if selection == "Home":
-    # Front page content
     st.title("Streamlit Analytics Platform")
     st.markdown(
         """
@@ -22,10 +25,11 @@ if selection == "Home":
 
         **Available Pages**
         - **Wind Production Analysis**: Analyze wind farm production over time, visualize trends, and explore data.
+        - **NO2 Spot Prices 2024**: Explore and summarize spot price data for the NO2 region.
+        - **Earnings Høg-Jæren 2024**: Calculate and explore revenue for the Høg-Jæren wind farm in 2024.
         """
     )
 else:
-    # Render the selected page
     page = PAGES[selection]
     if page:
         page()
