@@ -1,0 +1,11 @@
+[theme]
+# A deep, plant-green accent
+primaryColor = "#388E3C"
+# Sky-blue main background
+backgroundColor = "#E1F5FE"
+# Soft, pale-green secondary panels
+secondaryBackgroundColor = "#F1F8E9"
+# Dark green text for good contrast
+textColor = "#0F1C0F"
+# Clean, modern font
+font = "sans serif"

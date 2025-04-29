@@ -11,7 +11,7 @@ PAGES = {
     "Windfarm Earnings 2024": earnings_app,
 }
 
-st.set_page_config(page_title="Streamlit Analytics Platform", layout="wide")
+st.set_page_config(page_title="Streamlit Analytics Platform", page_icon="💨", layout="wide")
 
 # Sidebar navigation
 st.sidebar.title("Navigation")

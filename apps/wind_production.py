@@ -2,21 +2,22 @@ import streamlit as st
 import pandas as pd
 import os
 import datetime
+import random
 
 DATA_FILE = os.path.join("data", "vindproduksjon.xlsx")
 
 @st.cache_data
 def load_raw_data():
-    """
-    Read the raw Excel file (no processing).
-    """
+    """Load raw Excel data without processing."""
     return pd.read_excel(DATA_FILE, header=None)
 
 @st.cache_data
 def process_full_data(df_raw):
     """
-    Process raw DataFrame: parse timestamps, numeric conversion, rename columns.
-    Returns a DataFrame indexed by timestamp with farm names as columns.
+    Process raw DataFrame:
+    - Parse timestamps
+    - Convert to numeric
+    - Rename columns from IDs to farm names
     """
     farm_names = [str(x) for x in df_raw.iloc[0, 1:].tolist()]
     farm_ids = [str(x) for x in df_raw.iloc[1, 1:].tolist()]
@@ -34,27 +35,43 @@ def process_full_data(df_raw):
 @st.cache_data
 def process_year_data(df_raw, year):
     """
-    Process raw data and filter to a specific calendar year.
+    Filter processed DataFrame to a specific year.
     """
     df = process_full_data(df_raw)
-    mask = df.index.year == year
-    df_year = df.loc[mask].copy()
-    df_year = df_year.infer_objects()
+    df_year = df[df.index.year == year].copy()
     return df_year
+
+@st.cache_data
+def get_farm_locations(farms):
+    """
+    Generate random coordinates within Norway for each farm.
+    """
+    random.seed(42)
+    locs = {}
+    for farm in farms:
+        lat = random.uniform(57.5, 71.5)
+        lon = random.uniform(4.5, 31.0)
+        locs[farm] = (lat, lon)
+    return locs
+
 
 def app():
     st.title("Wind Production Analysis")
 
+    # Load and process data
     df_raw = load_raw_data()
     full_df = process_full_data(df_raw)
-    farm_names = list(full_df.columns)
+    farms = list(full_df.columns)
 
-    # Defaults to Høg-Jæren
+    # Sidebar: farm selection
     st.sidebar.markdown("---")
     st.sidebar.subheader("Wind Farm Selection")
-    default_selected = ["Høg-Jæren"] if "Høg-Jæren" in farm_names else [farm_names[0]]
-    selected = st.sidebar.multiselect("Select wind farms:", farm_names, default_selected)
+    default_farm = "Høg-Jæren" if "Høg-Jæren" in farms else farms[0]
+    selected_farms = st.sidebar.multiselect(
+        "Select wind farms:", farms, default=[default_farm]
+    )
 
+    # Sidebar: date range
     st.sidebar.subheader("Date Range")
     min_date = full_df.index.min().date()
     max_date = full_df.index.max().date()
@@ -74,11 +91,23 @@ def app():
         max_value=max_date
     )
 
-    filtered = data_df.loc[start:end, selected]
+    filtered = data_df.loc[start:end, selected_farms]
 
+    # Main visuals
     st.markdown("### Production Over Time")
-    st.line_chart(filtered, y=selected)
+    st.line_chart(filtered, y=selected_farms)
 
     st.markdown("### Data Table")
     with st.expander("Show raw data"):
         st.dataframe(filtered)
+
+    # Map of Wind Farms
+    st.markdown("### Map of Wind Farms")
+    locs = get_farm_locations(farms)
+    map_df = pd.DataFrame(
+        [{"farm": f, "lat": locs[f][0], "lon": locs[f][1]} for f in farms]
+    )
+    st.map(map_df.rename(columns={"lat": "latitude", "lon": "longitude"}))
+
+    st.markdown("**Farm Locations**")
+    st.dataframe(map_df.set_index("farm"))
