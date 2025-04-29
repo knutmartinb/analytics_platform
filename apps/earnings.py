@@ -1,78 +1,68 @@
 import streamlit as st
 import pandas as pd
 import os
-import datetime
 import altair as alt
 from apps.wind_production import load_raw_data, process_year_data
 from apps.spot_prices import load_spot_prices
 
-# Constants
 DATA_YEAR = 2024
 
 def app():
-    st.title("Earnings Analysis: Høg-Jæren 2024")
-
-    # Load production and spot price data
+    st.sidebar.markdown("---")
+    st.sidebar.subheader("Select Wind Farm for Earnings")
     df_raw = load_raw_data()
-    prod_df = process_year_data(df_raw, DATA_YEAR)[["Høg-Jæren"]]
-    price_df = load_spot_prices()
+    full_prod = process_year_data(df_raw, DATA_YEAR)
+    farms = list(full_prod.columns)
+    default = farms.index("Høg-Jæren") if "Høg-Jæren" in farms else 0
+    farm = st.sidebar.selectbox("Wind farm:", farms, index=default)
 
-    # Combine datasets on timestamp
-    df = prod_df.join(price_df, how="inner").dropna()
+    st.title(f"Earnings for {farm} in {DATA_YEAR}")
+
+    prod = full_prod[[farm]]
+    price = load_spot_prices()
+    df = prod.join(price, how="inner").dropna()
     df.columns = ["production", "price"]
-    # Calculate earnings
     df["earnings"] = df["production"] * df["price"]
 
-    # Key metrics
-    total_earnings = df["earnings"].sum()
-    avg_price_weighted = (df["earnings"].sum() / df["production"].sum())
-    avg_monthly_earnings = df["earnings"].resample("M").sum().reset_index()
+    total = df["earnings"].sum()
+    avg_weighted = total / df["production"].sum()
+    avg_spot = df["price"].mean()
+    capture = avg_weighted / avg_spot
+    monthly = df["earnings"].resample("M").sum().reset_index()
+    daily = df["earnings"].resample("D").sum()
+    best_day = daily.idxmax(); best_val = daily.max()
 
-    high_day = df["earnings"].resample("D").sum().idxmax()
-    high_day_value = df["earnings"].resample("D").sum().max()
+    c1, c2, c3, c4 = st.columns(4)
+    c1.metric("Total Earnings", f"{total:,.2f} €")
+    c2.metric("Weighted Avg Price", f"{avg_weighted:.2f} €/MWh")
+    c3.metric("Average Spot Price", f"{avg_spot:.2f} €/MWh")
+    c4.metric("Capture Rate", f"{capture:.2%}")
+    st.markdown(f"**Highest Earning Day:** {best_day.date()} — €{best_val:,.2f}")
 
-    # Display KPIs
-    k1, k2, k3 = st.columns(3)
-    k1.metric("Total Earnings 2024", f"{total_earnings:,.2f} €")
-    k2.metric("Weighted Avg. Price", f"{avg_price_weighted:.2f} €/MWh")
-    k3.metric("Highest Earning Day", f"{high_day_value:,.2f} €", delta=high_day.strftime('%Y-%m-%d'))
-
-    st.markdown("---")
-    # Earnings over time
     st.markdown("### Earnings Over Time")
-    earn_ts = df.reset_index()
-    line = alt.Chart(earn_ts).mark_line().encode(
-        x=alt.X("timestamp:T", title="Date"),
-        y=alt.Y("earnings:Q", title="Earnings (€)"),
-        tooltip=["timestamp", "earnings"]
-    ).properties(width="container", height=300)
+    ts = df.reset_index()
+    line = alt.Chart(ts).mark_line().encode(
+        x="timestamp:T", y=alt.Y("earnings:Q", title="Earnings (€)"), tooltip=["timestamp", "earnings"]
+    )
     st.altair_chart(line, use_container_width=True)
 
-    # Monthly earnings bar chart
     st.markdown("### Monthly Earnings")
-    bar = alt.Chart(avg_monthly_earnings).mark_bar().encode(
-        x=alt.X("timestamp:T", title="Month"),
-        y=alt.Y("earnings:Q", title="Total Earnings (€)"),
-        tooltip=["timestamp", "earnings"]
-    ).properties(width="container", height=300)
+    bar = alt.Chart(monthly).mark_bar().encode(
+        x="timestamp:T", y=alt.Y("earnings:Q", title="Earnings (€)"), tooltip=["timestamp", "earnings"]
+    )
     st.altair_chart(bar, use_container_width=True)
 
-    # Highest/lowest earning hours
-    st.markdown("### Top 10 Earning Hours")
+    st.markdown("### Top/Bottom Earning Hours")
     top10 = df["earnings"].nlargest(10).reset_index()
     top10.columns = ["Timestamp", "Earnings (€)"]
-    st.dataframe(top10)
-
-    st.markdown("### Bottom 10 Earning Hours")
     low10 = df["earnings"].nsmallest(10).reset_index()
     low10.columns = ["Timestamp", "Earnings (€)"]
+    st.dataframe(top10)
     st.dataframe(low10)
 
-    # Option: export earnings data
-    st.markdown("---")
     st.download_button(
-        label="Download Earnings Data",
+        label="Download Earnings CSV",
         data=df.to_csv(index=True),
-        file_name=f"hog_jaeren_earnings_{DATA_YEAR}.csv",
+        file_name=f"{farm}_earnings_{DATA_YEAR}.csv",
         mime="text/csv"
     )

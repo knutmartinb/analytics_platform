@@ -8,7 +8,7 @@ PAGES = {
     "Home": None,
     "Wind Production Analysis": wind_production_app,
     "NO2 Spot Prices 2024": spot_prices_app,
-    "Earnings Høg-Jæren 2024": earnings_app,
+    "Windfarm Earnings 2024": earnings_app,
 }
 
 st.set_page_config(page_title="Streamlit Analytics Platform", layout="wide")
@@ -24,9 +24,9 @@ if selection == "Home":
         Welcome to your analytics platform. Use the navigation sidebar to access different analyses.
 
         **Available Pages**
-        - **Wind Production Analysis**: Analyze wind farm production over time, visualize trends, and explore data.
-        - **NO2 Spot Prices 2024**: Explore and summarize spot price data for the NO2 region.
-        - **Earnings Høg-Jæren 2024**: Calculate and explore revenue for the Høg-Jæren wind farm in 2024.
+        - **Wind Production Analysis**: Analyze wind farm production over time.
+        - **NO2 Spot Prices 2024**: Explore spot price data for NO2.
+        - **Windfarm Earnings 2024**: Calculate revenue for selected wind farms in 2024.
         """
     )
 else:
